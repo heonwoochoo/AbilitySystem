@@ -4,9 +4,12 @@
 #include "HUDBase.h"
 #include "Blueprint/UserWidget.h"
 #include "ActionBarUI.h"
+#include "ActionBarSlotUI.h"
+#include "UI/CastBarUI.h"
 
 AHUDBase::AHUDBase()
 {
+	PrimaryActorTick.bCanEverTick = true;
 }
 
 void AHUDBase::BeginPlay()
@@ -18,6 +21,24 @@ void AHUDBase::BeginPlay()
 	{
 		ActionBar = CreateWidget<UActionBarUI>(Player, ActionBarWidget);
 		ActionBar->AddToViewport();
-		UE_LOG(LogTemp, Warning, TEXT("ActionBar »ý¼º"));
 	}
+}
+
+void AHUDBase::Tick(float DeltaTime)
+{
+}
+
+void AHUDBase::SetActionBar(UActionBarUI* ActionBarUI)
+{
+	ActionBar = ActionBarUI;
+}
+
+void AHUDBase::SetActionBarSlot(UActionBarSlotUI* ClickedSlot)
+{
+	CurrentSlot = ClickedSlot;
+}
+
+void AHUDBase::SetCastBar(UCastBarUI* NewCastBar)
+{
+	CastBar = NewCastBar;
 }

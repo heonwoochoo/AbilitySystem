@@ -7,6 +7,7 @@
 #include "Ability.generated.h"
 
 class UTexture2D;
+class AAbilitySystemCharacter;
 
 UCLASS()
 class ABILITYSYSTEM_API AAbility : public AActor
@@ -52,6 +53,17 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability Properties", meta = (AllowPrivateAccess = "ture"))
     UTexture2D* Icon;
 
+    AAbilitySystemCharacter* Character;
+
 public:
+    FORCEINLINE FString GetName() const { return Name; }
+    FORCEINLINE FString GetDescription() const { return Description; }
+    FORCEINLINE float GetCost() const { return Cost; }
+    FORCEINLINE float GetCooldown() const { return Cooldown; }
+    FORCEINLINE float GetCastTime() const { return CastTime; }
+    FORCEINLINE bool GetIsInterruptable() const { return bIsInterruptable; }
+    FORCEINLINE bool GetRequiresTarget() const { return bRequiresTarget; }
     UTexture2D* GetIcon();
+
+    void SpawnAbility();
 };

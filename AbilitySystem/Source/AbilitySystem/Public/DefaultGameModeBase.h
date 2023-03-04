@@ -17,6 +17,9 @@ class ABILITYSYSTEM_API ADefaultGameModeBase : public AGameModeBase
 public:
 	ADefaultGameModeBase();
 
+	UFUNCTION(BlueprintCallable)
+	void GameModeFunc();
+
 protected:
 	virtual void BeginPlay() override;
 

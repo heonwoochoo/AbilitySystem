@@ -6,6 +6,9 @@
 #include "Blueprint/UserWidget.h"
 #include "ActionBarUI.generated.h"
 
+class AAbility;
+class UCastBarUI;
+class UActionBar;
 /**
  * 
  */
@@ -14,4 +17,18 @@ class ABILITYSYSTEM_API UActionBarUI : public UUserWidget
 {
 	GENERATED_BODY()
 	
+public:
+	UCastBarUI* DisplayCastBar(AAbility* AbilityToCast);
+
+protected:
+	virtual bool Initialize() override;
+	
+private:
+	UPROPERTY(meta = (BindWidget))
+	UCastBarUI* CastBarUI;
+
+	UPROPERTY(meta = (BindWidget))
+	UActionBar* ActionBar;
+
+	void SetActionBarUIToHUD();
 };
