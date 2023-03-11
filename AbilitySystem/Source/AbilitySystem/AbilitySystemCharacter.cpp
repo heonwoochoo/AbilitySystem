@@ -13,6 +13,8 @@
 #include "AttributeSetBase.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponentBase.h"
+#include "Data/CharacterDataAsset.h"
+#include "Net/UnrealNetwork.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AAbilitySystemCharacter
@@ -61,6 +63,16 @@ AAbilitySystemCharacter::AAbilitySystemCharacter()
 	AttributeSet = CreateDefaultSubobject<UAttributeSetBase>(TEXT("AttributeSet"));
 }
 
+void AAbilitySystemCharacter::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+
+	if (IsValid(CharacterDataAsset))
+	{
+		SetCharacterData(CharacterDataAsset->CharacterData);
+	}
+}
+
 bool AAbilitySystemCharacter::ApplyGameplayEffectToSelf(TSubclassOf<UGameplayEffect> Effect, FGameplayEffectContextHandle InEffectContext)
 {
 	if (!Effect.Get()) return false;
@@ -82,21 +94,24 @@ UAbilitySystemComponent* AAbilitySystemCharacter::GetAbilitySystemComponent() co
 	return AbilitySystemComponent;
 }
 
-void AAbilitySystemCharacter::InitializeAttributes()
+FCharacterData AAbilitySystemCharacter::GetCharacterData() const
 {
-	if (GetLocalRole() == ROLE_Authority && DefaultAttributeSet && AttributeSet)
-	{
-		FGameplayEffectContextHandle EffectContext = AbilitySystemComponent->MakeEffectContext();
-		EffectContext.AddSourceObject(this);
-		ApplyGameplayEffectToSelf(DefaultAttributeSet, EffectContext);
-	}
+	return CharacterData;
 }
+
+void AAbilitySystemCharacter::SetCharacterData(const FCharacterData& InCharacterData)
+{
+	CharacterData = InCharacterData;
+	InitFromCharacterData(CharacterData);
+}
+
+
 
 void AAbilitySystemCharacter::GiveAbilities()
 {
 	if (HasAuthority() && AbilitySystemComponent)
 	{
-		for (auto DefaultAbility : DefaultAbilities)
+		for (auto DefaultAbility : CharacterData.Abilities)
 		{
 			AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(DefaultAbility));
 		}
@@ -110,7 +125,7 @@ void AAbilitySystemCharacter::ApplyStartupEffects()
 		FGameplayEffectContextHandle EffectContext = AbilitySystemComponent->MakeEffectContext();
 		EffectContext.AddSourceObject(this);
 
-		for (auto CharacterEffect : DefaultEffects)
+		for (auto CharacterEffect : CharacterData.Effects)
 		{
 			ApplyGameplayEffectToSelf(CharacterEffect, EffectContext);
 		}
@@ -122,7 +137,6 @@ void AAbilitySystemCharacter::PossessedBy(AController* NewController)
 	Super::PossessedBy(NewController);
 
 	AbilitySystemComponent->InitAbilityActorInfo(this, this);
-	InitializeAttributes();
 	GiveAbilities();
 	ApplyStartupEffects();
 }
@@ -132,7 +146,6 @@ void AAbilitySystemCharacter::OnRep_PlayerState()
 	Super::OnRep_PlayerState();
 
 	AbilitySystemComponent->InitAbilityActorInfo(this, this);
-	InitializeAttributes();
 }
 
 void AAbilitySystemCharacter::BeginPlay()
@@ -172,6 +185,16 @@ void AAbilitySystemCharacter::SetupPlayerInputComponent(class UInputComponent* P
 
 }
 
+void AAbilitySystemCharacter::OnRep_CharacterData()
+{
+	InitFromCharacterData(CharacterData, true);
+}
+
+void AAbilitySystemCharacter::InitFromCharacterData(const FCharacterData& InCharacterData, bool bFromReplication)
+{
+
+}
+
 void AAbilitySystemCharacter::Move(const FInputActionValue& Value)
 {
 	// input is a Vector2D
@@ -208,6 +231,11 @@ void AAbilitySystemCharacter::Look(const FInputActionValue& Value)
 	}
 }
 
+void AAbilitySystemCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
+	DOREPLIFETIME(AAbilitySystemCharacter, CharacterData);
+}
 
 
