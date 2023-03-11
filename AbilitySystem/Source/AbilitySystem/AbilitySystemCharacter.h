@@ -5,11 +5,18 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "InputActionValue.h"
+#include "Abilities/GameplayAbility.h"
+#include "AbilitySystemInterface.h"
 #include "AbilitySystemCharacter.generated.h"
 
+class UAttributeSetBase;
+class UAbilitySystemComponentBase;
+
+class UGameplayEffect;
+class UGameplayAbility;
 
 UCLASS(config=Game)
-class AAbilitySystemCharacter : public ACharacter
+class AAbilitySystemCharacter : public ACharacter, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
 
@@ -40,8 +47,32 @@ class AAbilitySystemCharacter : public ACharacter
 public:
 	AAbilitySystemCharacter();
 	
+	bool ApplyGameplayEffectToSelf(TSubclassOf<UGameplayEffect> Effect, FGameplayEffectContextHandle InEffectContext);
 
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 protected:
+
+	void InitializeAttributes();
+	void GiveAbilities();
+	void ApplyStartupEffects();
+
+	virtual void PossessedBy(AController* NewController) override;
+	virtual void OnRep_PlayerState() override;
+
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "GAS")
+	TSubclassOf<UGameplayEffect> DefaultAttributeSet;
+
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "GAS")
+	TArray<TSubclassOf<UGameplayAbility>> DefaultAbilities;
+
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "GAS")
+	TArray<TSubclassOf<UGameplayEffect>> DefaultEffects;
+
+	UPROPERTY(EditDefaultsOnly);
+	UAbilitySystemComponentBase* AbilitySystemComponent;
+
+	UPROPERTY(Transient)
+	UAttributeSetBase* AttributeSet;
 
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
@@ -63,4 +94,3 @@ public:
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 };
-
