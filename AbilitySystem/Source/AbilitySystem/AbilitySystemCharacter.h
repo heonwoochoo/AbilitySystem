@@ -47,7 +47,7 @@ class AAbilitySystemCharacter : public ACharacter, public IAbilitySystemInterfac
 	class UInputAction* LookAction;
 
 public:
-	AAbilitySystemCharacter();
+	AAbilitySystemCharacter(const FObjectInitializer& ObjectInitializer);
 	
 	virtual void PostInitializeComponents() override;
 

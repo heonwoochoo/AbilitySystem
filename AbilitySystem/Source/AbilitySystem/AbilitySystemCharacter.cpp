@@ -15,11 +15,13 @@
 #include "AbilitySystemComponentBase.h"
 #include "Data/CharacterDataAsset.h"
 #include "Net/UnrealNetwork.h"
+#include "ActorComponents/AG_CharacterMovementComponent.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AAbilitySystemCharacter
 
-AAbilitySystemCharacter::AAbilitySystemCharacter()
+AAbilitySystemCharacter::AAbilitySystemCharacter(const FObjectInitializer& ObjectInitializer) :
+	Super(ObjectInitializer.SetDefaultSubobjectClass<UAG_CharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
