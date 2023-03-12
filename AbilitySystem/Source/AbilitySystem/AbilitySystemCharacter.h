@@ -16,6 +16,7 @@ class UAbilitySystemComponentBase;
 class UGameplayEffect;
 class UGameplayAbility;
 class UCharacterDataAsset;
+class UFootstepComponent;
 
 UCLASS(config=Game)
 class AAbilitySystemCharacter : public ACharacter, public IAbilitySystemInterface
@@ -61,6 +62,10 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetCharacterData(const FCharacterData& InCharacterData);
 
+	UFootstepComponent* GetFootstepComponent() const;
+
+	virtual void Landed(const FHitResult& Hit) override;
+
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -91,7 +96,8 @@ protected:
 	UPROPERTY(EditDefaultsOnly)
 	UCharacterDataAsset* CharacterDataAsset;
 
-
+	UPROPERTY(BlueprintReadOnly)
+	UFootstepComponent* FootstepComponent;
 
 
 
@@ -101,6 +107,22 @@ protected:
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
 			
+	void OnJumpActionStarted();
+
+	void OnJumpActionEnded();
+
+	// Gameplay Events
+
+	UPROPERTY(EditDefaultsOnly)
+	FGameplayTag JumpEventTag;
+
+
+
+	// GameplayTags
+
+	UPROPERTY(EditDefaultsOnly)
+	FGameplayTagContainer InAirTags;
+
 
 public:
 	/** Returns CameraBoom subobject **/

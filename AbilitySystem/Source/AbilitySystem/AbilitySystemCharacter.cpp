@@ -16,6 +16,7 @@
 #include "Data/CharacterDataAsset.h"
 #include "Net/UnrealNetwork.h"
 #include "ActorComponents/AG_CharacterMovementComponent.h"
+#include "ActorComponents/FootstepComponent.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AAbilitySystemCharacter
@@ -63,6 +64,7 @@ AAbilitySystemCharacter::AAbilitySystemCharacter(const FObjectInitializer& Objec
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 
 	AttributeSet = CreateDefaultSubobject<UAttributeSetBase>(TEXT("AttributeSet"));
+	FootstepComponent = CreateDefaultSubobject<UFootstepComponent>(TEXT("FootstepComponent"));
 }
 
 void AAbilitySystemCharacter::PostInitializeComponents()
@@ -105,6 +107,25 @@ void AAbilitySystemCharacter::SetCharacterData(const FCharacterData& InCharacter
 {
 	CharacterData = InCharacterData;
 	InitFromCharacterData(CharacterData);
+}
+
+UFootstepComponent* AAbilitySystemCharacter::GetFootstepComponent() const
+{
+	if (FootstepComponent)
+	{
+		return FootstepComponent;
+	}
+	return nullptr;
+}
+
+void AAbilitySystemCharacter::Landed(const FHitResult& Hit)
+{
+	Super::Landed(Hit);
+
+	if (AbilitySystemComponent)
+	{
+		AbilitySystemComponent->RemoveActiveEffectsWithTags(InAirTags);
+	}
 }
 
 
@@ -174,8 +195,8 @@ void AAbilitySystemCharacter::SetupPlayerInputComponent(class UInputComponent* P
 	if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent)) {
 		
 		//Jumping
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &ACharacter::Jump);
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &AAbilitySystemCharacter::OnJumpActionStarted);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &AAbilitySystemCharacter::OnJumpActionEnded);
 
 		//Moving
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AAbilitySystemCharacter::Move);
@@ -231,6 +252,19 @@ void AAbilitySystemCharacter::Look(const FInputActionValue& Value)
 		AddControllerYawInput(LookAxisVector.X);
 		AddControllerPitchInput(LookAxisVector.Y);
 	}
+}
+
+void AAbilitySystemCharacter::OnJumpActionStarted()
+{
+	FGameplayEventData Payload;
+	Payload.Instigator = this;
+	Payload.EventTag = JumpEventTag;
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, JumpEventTag, Payload);
+}
+
+void AAbilitySystemCharacter::OnJumpActionEnded()
+{
+	//Super::StopJumping();
 }
 
 void AAbilitySystemCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
