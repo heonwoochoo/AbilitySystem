@@ -58,10 +58,14 @@ AAbilitySystemCharacter::AAbilitySystemCharacter(const FObjectInitializer& Objec
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 	
+
 	// Ability System
 	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponentBase>(TEXT("AbilitySystemComponent"));
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
+
+	// 이펙트가 적용될 때 호출할 함수를 바인딩
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetMaxMovementSpeedAttribute()).AddUObject(this, &AAbilitySystemCharacter::OnMaxMovementSpeedChanged);
 
 	AttributeSet = CreateDefaultSubobject<UAttributeSetBase>(TEXT("AttributeSet"));
 	FootstepComponent = CreateDefaultSubobject<UFootstepComponent>(TEXT("FootstepComponent"));
@@ -128,6 +132,42 @@ void AAbilitySystemCharacter::Landed(const FHitResult& Hit)
 	}
 }
 
+void AAbilitySystemCharacter::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
+{
+	Super::OnStartCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
+
+	if (AbilitySystemComponent)
+	{
+		FGameplayEffectContextHandle EffectContext = AbilitySystemComponent->MakeEffectContext();
+		if (CrouchStateEffect)
+		{
+			FGameplayEffectSpecHandle SpecHandle = AbilitySystemComponent->MakeOutgoingSpec(CrouchStateEffect.Get(), 1, EffectContext);
+			if (SpecHandle.IsValid())
+			{
+				FActiveGameplayEffectHandle ActiveGEHandle = AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+				if (!ActiveGEHandle.WasSuccessfullyApplied())
+				{
+					UE_LOG(LogTemp, Warning, TEXT("Ability %s failed to apply crouch effect %s"), *GetName(), *GetNameSafe(CrouchStateEffect));
+				}
+			}
+		}
+	}
+}
+
+void AAbilitySystemCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
+{
+	if (AbilitySystemComponent && CrouchStateEffect)
+	{
+		AbilitySystemComponent->RemoveActiveGameplayEffectBySourceEffect(CrouchStateEffect, AbilitySystemComponent);
+	}
+	
+	Super::OnEndCrouch(HalfHeightAdjust, ScaledHalfHeightAdjust);
+}
+
+void AAbilitySystemCharacter::OnMaxMovementSpeedChanged(const FOnAttributeChangeData& Data)
+{
+	GetCharacterMovement()->MaxWalkSpeed = Data.NewValue;
+}
 
 
 void AAbilitySystemCharacter::GiveAbilities()
@@ -193,19 +233,37 @@ void AAbilitySystemCharacter::SetupPlayerInputComponent(class UInputComponent* P
 {
 	// Set up action bindings
 	if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent)) {
-		
-		//Jumping
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &AAbilitySystemCharacter::OnJumpActionStarted);
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &AAbilitySystemCharacter::OnJumpActionEnded);
 
-		//Moving
-		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AAbilitySystemCharacter::Move);
+		if (JumpAction)
+		{
+			//Jumping
+			EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &AAbilitySystemCharacter::OnJumpActionStarted);
+			EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &AAbilitySystemCharacter::OnJumpActionEnded);
+		}
+		if (MoveAction)
+		{
+			//Moving
+			EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AAbilitySystemCharacter::Move);
+		}
+		if (LookAction)
+		{
+			//Looking
+			EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AAbilitySystemCharacter::Look);
+		}
+		if (CrouchAction)
+		{
+			//Crouching
+			EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Triggered, this, &AAbilitySystemCharacter::OnCrouchActionStarted);
+			EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Completed, this, &AAbilitySystemCharacter::OnCrouchActionEnded);
+		}
 
-		//Looking
-		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AAbilitySystemCharacter::Look);
-
+		if (SprintAction)
+		{
+			//Sprint
+			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Triggered, this, &AAbilitySystemCharacter::OnSprintActionStarted);
+			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &AAbilitySystemCharacter::OnSprintActionEnded);
+		}
 	}
-
 }
 
 void AAbilitySystemCharacter::OnRep_CharacterData()
@@ -265,6 +323,38 @@ void AAbilitySystemCharacter::OnJumpActionStarted()
 void AAbilitySystemCharacter::OnJumpActionEnded()
 {
 	//Super::StopJumping();
+}
+
+void AAbilitySystemCharacter::OnCrouchActionStarted()
+{
+	if (AbilitySystemComponent)
+	{
+		AbilitySystemComponent->TryActivateAbilitiesByTag(CrouchTags, true);
+	}
+}
+
+void AAbilitySystemCharacter::OnCrouchActionEnded()
+{
+	if (AbilitySystemComponent)
+	{
+		AbilitySystemComponent->CancelAbilities(&CrouchTags);
+	}
+}
+
+void AAbilitySystemCharacter::OnSprintActionStarted()
+{
+	if (AbilitySystemComponent)
+	{
+		AbilitySystemComponent->TryActivateAbilitiesByTag(SprintTags, true);
+	}
+}
+
+void AAbilitySystemCharacter::OnSprintActionEnded()
+{
+	if (AbilitySystemComponent)
+	{
+		AbilitySystemComponent->CancelAbilities(&SprintTags);
+	}
 }
 
 void AAbilitySystemCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const

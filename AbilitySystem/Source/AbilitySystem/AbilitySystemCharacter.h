@@ -47,6 +47,14 @@ class AAbilitySystemCharacter : public ACharacter, public IAbilitySystemInterfac
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* LookAction;
 
+	/** Crouch Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* CrouchAction;
+
+	/** Sprint Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* SprintAction;
+
 public:
 	AAbilitySystemCharacter(const FObjectInitializer& ObjectInitializer);
 	
@@ -65,6 +73,12 @@ public:
 	UFootstepComponent* GetFootstepComponent() const;
 
 	virtual void Landed(const FHitResult& Hit) override;
+
+	virtual void OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
+
+	virtual void OnEndCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust) override;
+
+	void OnMaxMovementSpeedChanged(const FOnAttributeChangeData& Data);
 
 protected:
 	// APawn interface
@@ -111,17 +125,37 @@ protected:
 
 	void OnJumpActionEnded();
 
+	void OnCrouchActionStarted();
+
+	void OnCrouchActionEnded();
+
+	void OnSprintActionStarted();
+
+	void OnSprintActionEnded();
+
 	// Gameplay Events
 
 	UPROPERTY(EditDefaultsOnly)
 	FGameplayTag JumpEventTag;
 
-
-
 	// GameplayTags
 
 	UPROPERTY(EditDefaultsOnly)
 	FGameplayTagContainer InAirTags;
+
+	UPROPERTY(EditDefaultsOnly)
+	FGameplayTagContainer CrouchTags;
+
+	UPROPERTY(EditDefaultsOnly)
+	FGameplayTagContainer SprintTags;
+
+protected:
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<UGameplayEffect> CrouchStateEffect;
+
+	// Delegates
+
+	FDelegateHandle MaxMovementSpeedChangedDelegateHandle;
 
 
 public:
