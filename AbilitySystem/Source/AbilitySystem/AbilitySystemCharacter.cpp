@@ -17,6 +17,7 @@
 #include "Net/UnrealNetwork.h"
 #include "ActorComponents/AG_CharacterMovementComponent.h"
 #include "ActorComponents/FootstepComponent.h"
+#include "ActorComponents/AG_MotionWarpingComponent.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AAbilitySystemCharacter
@@ -44,6 +45,8 @@ AAbilitySystemCharacter::AAbilitySystemCharacter(const FObjectInitializer& Objec
 	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
 
+	CharacterMovementComponent = Cast<UAG_CharacterMovementComponent>(GetCharacterMovement());
+
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
@@ -68,7 +71,10 @@ AAbilitySystemCharacter::AAbilitySystemCharacter(const FObjectInitializer& Objec
 	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetMaxMovementSpeedAttribute()).AddUObject(this, &AAbilitySystemCharacter::OnMaxMovementSpeedChanged);
 
 	AttributeSet = CreateDefaultSubobject<UAttributeSetBase>(TEXT("AttributeSet"));
+
 	FootstepComponent = CreateDefaultSubobject<UFootstepComponent>(TEXT("FootstepComponent"));
+
+	CharacterMotionWarpingComponent = CreateDefaultSubobject<UAG_MotionWarpingComponent>(TEXT("MotionWarpingComponent"));
 }
 
 void AAbilitySystemCharacter::PostInitializeComponents()
@@ -167,6 +173,11 @@ void AAbilitySystemCharacter::OnEndCrouch(float HalfHeightAdjust, float ScaledHa
 void AAbilitySystemCharacter::OnMaxMovementSpeedChanged(const FOnAttributeChangeData& Data)
 {
 	GetCharacterMovement()->MaxWalkSpeed = Data.NewValue;
+}
+
+UAG_MotionWarpingComponent* AAbilitySystemCharacter::GetCharacterMotionWarpingComponent() const
+{
+	return CharacterMotionWarpingComponent;
 }
 
 
@@ -314,10 +325,10 @@ void AAbilitySystemCharacter::Look(const FInputActionValue& Value)
 
 void AAbilitySystemCharacter::OnJumpActionStarted()
 {
-	FGameplayEventData Payload;
-	Payload.Instigator = this;
-	Payload.EventTag = JumpEventTag;
-	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, JumpEventTag, Payload);
+	if (CharacterMovementComponent)
+	{
+		CharacterMovementComponent->TryTraversal(AbilitySystemComponent);
+	}
 }
 
 void AAbilitySystemCharacter::OnJumpActionEnded()

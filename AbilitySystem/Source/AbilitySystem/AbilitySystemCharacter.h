@@ -17,6 +17,9 @@ class UGameplayEffect;
 class UGameplayAbility;
 class UCharacterDataAsset;
 class UFootstepComponent;
+class UAG_MotionWarpingComponent;
+class UAG_CharacterMovementComponent;
+
 
 UCLASS(config=Game)
 class AAbilitySystemCharacter : public ACharacter, public IAbilitySystemInterface
@@ -80,6 +83,8 @@ public:
 
 	void OnMaxMovementSpeedChanged(const FOnAttributeChangeData& Data);
 
+	UAG_MotionWarpingComponent* GetCharacterMotionWarpingComponent() const;
+
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -113,7 +118,10 @@ protected:
 	UPROPERTY(BlueprintReadOnly)
 	UFootstepComponent* FootstepComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = MotionWarp)
+	UAG_MotionWarpingComponent* CharacterMotionWarpingComponent;
 
+	UAG_CharacterMovementComponent* CharacterMovementComponent;
 
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
